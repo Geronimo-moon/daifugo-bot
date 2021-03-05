@@ -416,7 +416,8 @@ def handle_text_message(event):
 
                 if config["soot"] and (len(tsoot)-len(soot)) != len(subtract_list(tsoot,soot)):
                     user_card["cards"][event.source.user_id] = []
-                    send = [TextSendMessage(text="場のカードと同じスートのカードを提出する必要があります。カードを一から選びなおすか、パスすることを宣言してください。")]
+                    breakflg = True
+                    msg = [TextSendMessage(text="場のカードと同じスートのカードを提出する必要があります。カードを一から選びなおすか、パスすることを宣言してください。")]
 
                 elif not config["soot"] and subtract_list(soot, tsoot) == [] and many != 0:
                     if isinstance(event.source, SourceGroup):
@@ -467,6 +468,7 @@ def handle_text_message(event):
                             stepflg += 1
 
                 if breakflg:
+                    send = []
                     break
 
                 if num == 5 and config["eight"]:
@@ -750,7 +752,7 @@ def handle_postback(event):
         line_bot_api.reply_message(event.reply_token, template_message)
 
     elif event.postback.data == 'load_game':
-        trump = rand_ints_nodup(1,54)
+        trump = rand_ints_nodup(0,53)
         k = 0
         if isinstance(event.source, SourceGroup):
             while k < 54 :
