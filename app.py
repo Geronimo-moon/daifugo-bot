@@ -113,7 +113,7 @@ def callback():
 def handle_text_message(event):
     text = event.message.text
 
-    with open('gamedata.json', 'w') as f:
+    with open('gamedata.json', 'r+') as f:
         game = json.load(f)
         game_id_group = game["group"]
         game_id_room = game["room"]
@@ -691,7 +691,7 @@ def handle_text_message(event):
 @handler.add(PostbackEvent)
 def handle_postback(event):
 
-    with open('gamedata.json', 'w') as f:
+    with open('gamedata.json', 'r+') as f:
         game = json.load(f)
         game_id_group = game["group"]
         game_id_room = game["room"]
