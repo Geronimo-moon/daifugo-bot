@@ -512,7 +512,7 @@ def handle_text_message(event):
                             game_id_group[event.source.group_id]["card"].append(i)
 
                     else:
-                        for i in range(jkr):
+                        for z in range(jkr):
                             game_id_group[event.source.group_id]["card"].append(i)
                             jkr = 1
 
