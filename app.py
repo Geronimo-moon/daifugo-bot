@@ -41,7 +41,7 @@ static_tmp_path = os.path.join(os.path.dirname(__file__), 'static', 'tmp')
 
 with open('gamedata.json', 'w') as f:
     gamedata = {'group':{}, 'room':{}, 'user':{'cards':{}}}
-    json.dump(data, f, ensure_ascii=False, indent=3)
+    json.dump(gamedata, f, ensure_ascii=False, indent=3)
 
 def rand_ints_nodup(a, b):
         ns = []
@@ -97,7 +97,7 @@ def callback():
 
     
     try:
-        handler.handle(body, signature)3
+        handler.handle(body, signature)
     except LineBotApiError as e:
         print("Got exception from LINE Messaging API: %s\n" % e.message)
         for m in e.error.details:
@@ -819,11 +819,11 @@ def handle_postback(event):
                         st = 'ダイヤの'
                     elif soot == 3:
                         st = 'ハートの'
-                    if no = 11:
+                    if no == 11:
                         no = 'J'
-                    elif no = 12:
+                    elif no == 12:
                         no = 'Q'
-                    elif no = 0:
+                    elif no == 0:
                         no = 'K'
 
                 send = TextSendMessage(text=f"{st}{no}を提出します。ほかに提出したいカードがある場合は選択し、グループに戻って「提出する」と発言してください。")
@@ -900,4 +900,4 @@ if __name__ == "__main__":
 
     make_static_tmp_dir()
 
-    app.run(debug=options.debug, port=options.port)3
+    app.run(debug=options.debug, port=options.port)
