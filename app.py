@@ -152,7 +152,7 @@ def handle_text_message(event):
                 game_id_group[event.source.group_id] = game_data
             line_bot_api.reply_message(event.reply_token, template_message)
         elif isinstance(event.source, SourceRoom):
-            if not event.source.room_id in game_id_room
+            if not event.source.room_id in game_id_room:
                 game_id_room[event.source.room_id] = game_data
             line_bot_api.reply_message(event.reply_token, template_message)
         else:
