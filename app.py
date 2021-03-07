@@ -395,6 +395,7 @@ def handle_text_message(event):
         msg = []
         soot = []
         tsoot = []
+        s3 = False
 
         if many != 0 and len(card) != many:
             if isinstance(event.source, SourceGroup):
@@ -438,6 +439,7 @@ def handle_text_message(event):
                     if trash[j] == 52 or trash[j] == 53:
                         if config["spade3"] and many == 1 and i == 13:
                             reset = True
+                            s3 = True
                             message.append(f'スぺ3返しが発生しました。{player}さんはもう一度カードを選択し、提出してください。')
 
                         else:
@@ -447,26 +449,26 @@ def handle_text_message(event):
                             break
 
                     if (e_change or change) and not (e_change and change):
-                        if num >= trash[j]%13 and num != 13:
+                        if num >= trash[j]%13 and num != 13 and not s3:
                             user_card["cards"][event.source.user_id] = []
                             msg = [TextSendMessage(text="場のカードより小さいカードを提出する必要があります。カードを一から選びなおすか、パスすることを宣言してください。")]
                             breakflg = True
                             break 
 
-                    elif num <= trash[j]%13:
+                    elif num <= trash[j]%13 and not s3:
                         user_card["cards"][event.source.user_id] = []
                         msg = [TextSendMessage(text="場のカードより大きいカードを提出する必要があります。カードを一から選びなおすか、パスすることを宣言してください。")]
                         breakflg = True
                         break
 
                     if config["steplock"]:
-                        if config["step"] and (trash[j]%13)+1 != num and num != 13 and not((e_change or change) and not (e_change and change)):
+                        if config["step"] and (trash[j]%13)+1 != num and num != 13 and not((e_change or change) and not (e_change and change)) and not s3:
                             user_card["cards"][event.source.user_id] = []
                             msg = [TextSendMessage(text="場のカードより1大きいカードを提出する必要があります。カードを一から選びなおすか、パスすることを宣言してください。")]
                             breakflg = True
                             break
 
-                        elif config["step"] and (trash[j]%13)-1 != num and num != 13 and ((e_change or change) and not (e_change and change)):
+                        elif config["step"] and (trash[j]%13)-1 != num and num != 13 and ((e_change or change) and not (e_change and change)) and not s3:
                             user_card["cards"][event.source.user_id] = []
                             msg = [TextSendMessage(text="場のカードより1小さいカードを提出する必要があります。カードを一から選びなおすか、パスすることを宣言してください。")]
                             breakflg = True
@@ -578,9 +580,9 @@ def handle_text_message(event):
 
         if not 52 in card and not 53 in card:
             if isinstance(event.source, SourceGroup):
-                game_id_group[event.source.group_id]["config"]["wasjoker"] = True
+                game_id_group[event.source.group_id]["config"]["wasjoker"] = False
             elif isinstance(event.source, SourceRoom):
-                game_id_room[event.source.room_id]["config"]["wasjoker"] = True
+                game_id_room[event.source.room_id]["config"]["wasjoker"] = False
 
         if send != []:
 
