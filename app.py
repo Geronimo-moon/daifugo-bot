@@ -711,7 +711,7 @@ def handle_text_message(event):
         line_bot_api.reply_message(event.reply_token, send)
 
     elif text == "終了する":
-        buttons_template = ButtonsTemplate(title='終了しますか？', text='ゲームのデータは完全に削除されます', actions=[PostbackAction(label='終了する', action='finish'), PostbackAction(label='続行する', action='pass')])
+        buttons_template = ButtonsTemplate(title='終了しますか？', text='ゲームのデータは完全に削除されます', actions=[PostbackAction(label='終了する', data='finish'), PostbackAction(label='続行する', data='pass')])
         template_message = TemplateSendMessage(
             alt_text='終了ボタン', template=buttons_template)
         line_bot_api.reply_message(event.reply_token, template_message)
@@ -781,11 +781,11 @@ def handle_postback(event):
     elif event.postback.data == 'start_game':
         x = False
         if isinstance(event.source, SourceGroup):
-            if not game_id_group[event.source.group_id]["flag"]:
+            if game_id_group[event.source.group_id]["flag"]:
                 x = True
                 template_message = TextSendMessage(text="ゲーム中です。")
         elif isinstance(event.source, SourceRoom):
-            if not game_id_room[event.source.room_id]["flag"]:
+            if game_id_room[event.source.room_id]["flag"]:
                 x = True
                 template_message = TextSendMessage(text="ゲーム中です。")
         if not x:
