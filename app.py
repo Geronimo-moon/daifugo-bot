@@ -366,8 +366,6 @@ def handle_text_message(event):
             card = user_card["cards"][event.source.user_id]
         except KeyError:
             return None
-        send = []
-        breakflg = False
         if isinstance(event.source, SourceGroup):
             try:
                 trash = game_id_group[event.source.group_id]["card"]
@@ -386,6 +384,9 @@ def handle_text_message(event):
             many = len(trash)
             config = game_id_room[event.source.room_id]["config"]
             player = game_id_room[event.source.room_id]["menber"][event.source.user_id]
+
+        send = []
+        breakflg = False
         e_change = config["e_change"]
         change = config["change"]
         stepflg = 0
@@ -440,27 +441,27 @@ def handle_text_message(event):
 
                         else:
                             user_card["cards"][event.source.user_id] = []
-                            send = [TextSendMessage(text="場のカードより強いカードを提出する必要があります。カードを一から選びなおすか、パスすることを宣言してください。")]
+                            msg = [TextSendMessage(text="場のカードより強いカードを提出する必要があります。カードを一から選びなおすか、パスすることを宣言してください。")]
                             breakflg = True
                             break
 
                     if (e_change or change) and not (e_change and change):
                         if num >= trash[j]%13 and num != 13:
                             user_card["cards"][event.source.user_id] = []
-                            send = [TextSendMessage(text="場のカードより小さいカードを提出する必要があります。カードを一から選びなおすか、パスすることを宣言してください。")]
+                            msg = [TextSendMessage(text="場のカードより小さいカードを提出する必要があります。カードを一から選びなおすか、パスすることを宣言してください。")]
                             breakflg = True
                             break 
 
                     elif num <= trash[j]%13:
                         user_card["cards"][event.source.user_id] = []
-                        send = [TextSendMessage(text="場のカードより大きいカードを提出する必要があります。カードを一から選びなおすか、パスすることを宣言してください。")]
+                        msg = [TextSendMessage(text="場のカードより大きいカードを提出する必要があります。カードを一から選びなおすか、パスすることを宣言してください。")]
                         breakflg = True
                         break
 
                     if config["steplock"]:
                         if config["step"] and (trash[j]%13)+1 != num and num != 13:
                             user_card["cards"][event.source.user_id] = []
-                            send = [TextSendMessage(text="場のカードより1大きいカードを提出する必要があります。カードを一から選びなおすか、パスすることを宣言してください。")]
+                            msg = [TextSendMessage(text="場のカードより1大きいカードを提出する必要があります。カードを一から選びなおすか、パスすることを宣言してください。")]
                             breakflg = True
                             break
 
@@ -516,7 +517,7 @@ def handle_text_message(event):
                     else:
                         for z in range(jkr):
                             game_id_group[event.source.group_id]["card"].append(i)
-                            jkr = 1
+                        jkr = 1
 
                 elif isinstance(event.source, SourceRoom):
                     if (i == 52 or i == 53):
@@ -571,8 +572,6 @@ def handle_text_message(event):
 
             send_msg = '\n\n'.join(message)
 
-            print(send)
-
             image_carousel_template = ImageCarouselTemplate(columns=send)
 
             template_message = TemplateSendMessage(
@@ -607,18 +606,19 @@ def handle_text_message(event):
         else:
             if isinstance(event.source, SourceGroup):
                 game_id_group[event.source.group_id]["ranking"]["now"].append(event.source.user_id)
-                game = game_id_group[event.source.group_id]
-                winner = game["menber"][event.source.user_id]
-                send.append(TextSendMessage(text=f"{winner}さんがあがりました。"))
+                game = game_id_group[event.source.group_id] 
             elif isinstance(event.source, SourceRoom):
                 game_id_room[event.source.room_id]["ranking"]["now"].append(event.source.user_id)
                 game = game_id_room[event.source.room_id]
+
+            winner = game["menber"][event.source.user_id]
+            send.append(TextSendMessage(text=f"{winner}さんがあがりました。\n"))
 
             if game["ranking"]["past"] != []:
                 if game["config"]["kingdie"] and len(game["ranking"]["now"]) == 1 and game["ranking"]["past"][0] != game["ranking"]["now"][0]:
                     king = game["ranking"]["past"][0]
                     name = game["menber"][king]
-                    send.append(TextSendMessage(text=f"都落ちが発生しました。{name}さんは大貧民となります。"))
+                    send.append(TextSendMessage(text=f"都落ちが発生しました。{name}さんは大貧民となります。\n"))
                     if isinstance(event.source, SourceGroup):
                         game_id_group[event.source.group_id]["ranking"]["died"] = king
                     elif isinstance(event.source, SourceRoom):
@@ -627,7 +627,7 @@ def handle_text_message(event):
             if len(game["ranking"]["now"]) + 2 == len(game["menber"]) and "died" in game["ranking"]:
                     player = list(game["menber"].keys())
                     game["ranking"]["now"].append(game["ranking"]["died"])
-                    poor = subtract_list(player, game["ranking"]["now"])
+                    poor = subtract_list(player, game["ranking"]["now"])[0]
 
                     if isinstance(event.source, SourceGroup):
                         game_id_group[event.source.group_id]["ranking"]["now"].append(poor)
@@ -637,13 +637,18 @@ def handle_text_message(event):
                         game_id_room[event.source.room_id]["ranking"]["now"].append(game["ranking"]["died"])
                     fin = True
 
-            elif len(game["ranking"]["now"]) + 1 == len(game["menber"]):
+            elif len(game["ranking"]["now"]) + 1 == len(game["menber"]) or len(game["ranking"]["now"]) == len(game["menber"]):
                 player = list(game["menber"].keys())
-                poor = subtract_list(player, game["ranking"]["now"])
-                if isinstance(event.source, SourceGroup):
-                    game_id_group[event.source.group_id]["ranking"]["now"].append(poor)
-                elif isinstance(event.source, SourceRoom):
-                    game_id_room[event.source.room_id]["ranking"]["now"].append(poor)
+                try:
+                    poor = subtract_list(player, game["ranking"]["now"])[0]
+                    if isinstance(event.source, SourceGroup):
+                        game_id_group[event.source.group_id]["ranking"]["now"].append(poor)
+                    elif isinstance(event.source, SourceRoom):
+                        game_id_room[event.source.room_id]["ranking"]["now"].append(poor)
+
+                except IndexError:
+                    pass
+
                 fin = True
 
             if fin:
@@ -651,12 +656,12 @@ def handle_text_message(event):
                 for i, j in enumerate(game["ranking"]["now"]):
                     if i == 0:
                         level = "大富豪"
-                    elif i == 1:
-                        level = "富豪"
-                    elif i == len(game["ranking"]["now"]) - 2:
-                        level = "貧民"
                     elif i == len(game["ranking"]["now"]) - 1:
                         level = "大貧民"
+                    elif i == 1 and len(game["ranking"]["now"]) >= 4:
+                        level = "富豪"
+                    elif i == len(game["ranking"]["now"]) - 2 and len(game["ranking"]["now"]) >= 4:
+                        level = "貧民"
                     else:
                         level = "平民"
                     name = game["menber"][j]
@@ -680,10 +685,11 @@ def handle_text_message(event):
         line_bot_api.reply_message(event.reply_token, send)
 
     elif text == "終了する":
-        buttons_template = ButtonsTemplate(title='終了しますか？', text='ゲームのデータは完全に削除されます', actions=[PostbackAction(label='終了する', action='finish')])
+        buttons_template = ButtonsTemplate(title='終了しますか？', text='ゲームのデータは完全に削除されます', actions=[PostbackAction(label='終了する', action='finish'), PostbackAction(label='続行する', action='pass')])
         template_message = TemplateSendMessage(
             alt_text='終了ボタン', template=buttons_template)
         line_bot_api.reply_message(event.reply_token, template_message)
+
 
     with open('gamedata.json', 'w') as f:
         data = {'group':game_id_group, 'room':game_id_room, 'user':user_card}
@@ -710,6 +716,7 @@ def handle_postback(event):
             TextSendMessage(text="「大富豪スタート」と発言することで、スタートメニューを表示します。\n「（特殊ルール名）有効/無効」と発言することで、その特殊ルールを有効/無効にすることができます。都落ちとカード交換は同時発生のため、「都落ち・カード交換有効/無効」と発言してください。\n「ゲームに参加する」と発言することで、ゲームに参加することができます。\n「カードを確認する」とbotとのトークで発言すると、カードが表示され、提出するカードを選ぶことができます。\nカードを選択後にグループで「提出する」と発言すると、選択したカードが提出されます。\n「全員がパスを選択」と発言することで、場を削除し、新しいターンを開始します。\n手札がなくなった時点で「あがる」と発言してください。手札がないことを確認したのち、あがることができます。\n「終了する」と発言することで、いつでもゲームを終了できます。但し、戦績などのデータはすべて破棄されますのでご注意ください。\n\nパスの処理・あがりの処理は自動で行われません。条件を満たした時は必ず自分で発言するようにしてください。\nまた、PC版LINEでは現在大富豪をお楽しみいただけません。\nタイムアウトエラーにより返信が来ない時があります。お手数ですが、返信が来るまで根気よくメッセージを送信してください。")
         ]
         line_bot_api.reply_message(event.reply_token, explain)
+
     elif event.postback.data == 'set_config':
         carousel_template = CarouselTemplate(columns=[
             CarouselColumn(text='有効化しますか？', title='八切り', actions=[
@@ -761,9 +768,6 @@ def handle_postback(event):
                     k += 1
                     if k >= 54:
                         break
-
-            
-
         if isinstance(event.source, SourceRoom):
             while k < 54 :
                 for i in list(game_id_room[event.source.room_id]["menber"].keys()):
@@ -843,7 +847,7 @@ def handle_postback(event):
             
             for i in list(game_id_group[event.source.group_id]["menber"].keys()):
                 user_card[i] = []
-                user_card[cards] = []
+                user_card["cards"][i] = []
 
         if isinstance(event.source, SourceRoom):
             past = game_id_room[event.source.room_id]["ranking"]["now"]
@@ -852,7 +856,7 @@ def handle_postback(event):
             
             for i in list(game_id_group[event.source.room_id]["menber"].keys()):
                 user_card[i] = []
-                user_card[cards] = []
+                user_card["cards"][i] = []
 
         trump = rand_ints_nodup(0,53)
         k = 0
@@ -863,9 +867,6 @@ def handle_postback(event):
                     k += 1
                     if k >= 54:
                         break
-
-            
-
         if isinstance(event.source, SourceRoom):
             while k < 54 :
                 for i in list(game_id_room[event.source.room_id]["menber"].keys()):
@@ -874,12 +875,18 @@ def handle_postback(event):
                     if k >= 54:
                         break
 
-        line_bot_api.reply_message(event.reply_token, TextSendMessage(text='カードの分配を行いました。botとのトークで「カードを確認する」と発言し、自分の手札を確認してください。全員の確認が終わったら好きな人からカードを提出してください。'))
+        line_bot_api.reply_message(event.reply_token, TextSendMessage(text='同じメンバーで新たなゲームを開始し、カードの再分配を行いました。botとのトークで「カードを確認する」と発言し、自分の手札を確認してください。全員の確認が終わったら好きな人からカードを提出してください。'))
 
     elif event.postback.data == 'finish':
         if isinstance(event.source, SourceGroup):
+            for i in list(game_id_group[event.source.group_id]["menber"].keys()):
+                user_card[i] = []
+                user_card["cards"][i] = []
             del game_id_group[event.source.group_id]
         elif isinstance(event.source, SourceRoom):
+            for i in list(game_id_room[event.source.room_id]["menber"].keys()):
+                user_card[i] = []
+                user_card["cards"][i] = []
             del game_id_room[event.source.room_id]
 
         line_bot_api.reply_message(event.reply_token, TextSendMessage(text="大富豪を終了しました。またのご利用をお待ちしております。"))
@@ -887,6 +894,7 @@ def handle_postback(event):
     with open('gamedata.json', 'w') as f:
         data = {'group':game_id_group, 'room':game_id_room, 'user':user_card}
         json.dump(data, f, ensure_ascii=False, indent=3)
+
 
 @app.route('/static/<path:path>')
 def send_static_content(path):
