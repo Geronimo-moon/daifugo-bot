@@ -141,11 +141,10 @@ def handle_text_message(event):
             alt_text='大富豪スタートメニュー', template=image_carousel_template)
 
         players = {}
-        configs = {"eight":False, "eleven":False, "revol":False, "spade3":False, "sootlock":False, "steplock":False, "kingdie":False, "e_change":False, "change":False, "soot":False, "step":False}
+        configs = {"eight":False, "eleven":False, "revol":False, "spade3":False, "sootlock":False, "steplock":False, "kingdie":False, "e_change":False, "change":False, "soot":False, "step":False, "wasjoker":False}
         rankings = {"past":[], "now":[]}
         cards = []
-        flag = False
-        game_data = {"menber":players, "config":configs, "ranking":rankings, "card":cards, "flag":flag}
+        game_data = {"menber":players, "config":configs, "ranking":rankings, "card":cards, "flag":False}
 
         if isinstance(event.source, SourceGroup):
             if not event.source.group_id in game_id_group:
@@ -388,7 +387,6 @@ def handle_text_message(event):
         breakflg = False
         e_change = config["e_change"]
         change = config["change"]
-        stepflg = 0
         message = []
         send_msg = ''
         jkr = 1
@@ -419,7 +417,7 @@ def handle_text_message(event):
                     breakflg = True
                     msg = [TextSendMessage(text="場のカードと同じスートのカードを提出する必要があります。カードを一から選びなおすか、パスすることを宣言してください。")]
 
-                elif not config["soot"] and subtract_list(soot, tsoot) == [] and many != 0:
+                elif not config["soot"] and not config["wasjoker"] and subtract_list(soot, tsoot) == [] and many != 0:
                     if isinstance(event.source, SourceGroup):
                         game_id_group[event.source.group_id]["config"]["soot"] = True
                     elif isinstance(event.source, SourceRoom):
@@ -430,6 +428,10 @@ def handle_text_message(event):
             for i in card:
                 if i == 52 or i == 53:
                     num = 13
+                    if isinstance(event.source, SourceGroup):
+                        game_id_group[event.source.group_id]["config"]["wasjoker"] = True
+                    elif isinstance(event.source, SourceRoom):
+                        game_id_room[event.source.room_id]["config"]["wasjoker"] = True
                 else:
                     num = i % 13
                 for j in range(many):
@@ -470,8 +472,14 @@ def handle_text_message(event):
                             breakflg = True
                             break
 
-                        elif not config["step"] and (trash[j]%13)+1 == num:
-                            stepflg += 1
+                        elif not config["step"] and (trash[j]%13)+1 == num and not config["wasjoker"] and (not 52 in card and not 53 in card):
+                            if isinstance(event.source, SourceGroup):
+                                game_id_group[event.source.group_id]["config"]["step"] = True
+                            elif isinstance(event.source, SourceRoom):
+                                game_id_room[event.source.room_id]["card"]["step"] = True
+
+                            message.append('階段縛りが発生しました。場のカードより1だけ強いカードのみ提出できます。')
+
 
                 if breakflg:
                     if isinstance(event.source, SourceGroup):
@@ -550,13 +558,6 @@ def handle_text_message(event):
                         for z in range(jkr):
                             game_id_room[event.source.room_id]["card"].append(i)
                         jkr = 1
-            if stepflg == many and subtract_list(card, [52,53]) != [] and many != 0:
-                if isinstance(event.source, SourceGroup):
-                    game_id_group[event.source.group_id]["config"]["step"] = True
-                elif isinstance(event.source, SourceRoom):
-                    game_id_room[event.source.room_id]["card"]["step"] = True
-
-                message.append('階段縛りが発生しました。場のカードより1だけ強いカードのみ提出できます。')
 
             message.append('次の人はカードを選択し、「提出する」と発言してください。')        
 
@@ -574,6 +575,12 @@ def handle_text_message(event):
 
         user_card[event.source.user_id] = subtract_list(user_card[event.source.user_id], user_card["cards"][event.source.user_id])
         user_card["cards"][event.source.user_id] = []
+
+        if not 52 in card and not 53 in card:
+            if isinstance(event.source, SourceGroup):
+                game_id_group[event.source.group_id]["config"]["wasjoker"] = True
+            elif isinstance(event.source, SourceRoom):
+                game_id_room[event.source.room_id]["config"]["wasjoker"] = True
 
         if send != []:
 
@@ -772,9 +779,19 @@ def handle_postback(event):
         line_bot_api.reply_message(event.reply_token, template_message)
 
     elif event.postback.data == 'start_game':
-        buttons_template = ButtonsTemplate(title='ゲームが作成されました', text='ゲームに参加する場合は下のボタンを押す', actions=[MessageAction(label='参加する', text='ゲームに参加する'), PostbackAction(label='開始する', data='load_game')])
-        template_message = TemplateSendMessage(
-            alt_text='参加ボタン', template=buttons_template)
+        x = False
+        if isinstance(event.source, SourceGroup):
+            if not game_id_group[event.source.group_id]["flag"]:
+                x = True
+                template_message = TextSendMessage(text="ゲーム中です。")
+        elif isinstance(event.source, SourceRoom):
+            if not game_id_room[event.source.room_id]["flag"]:
+                x = True
+                template_message = TextSendMessage(text="ゲーム中です。")
+        if not x:
+            buttons_template = ButtonsTemplate(title='ゲームが作成されました', text='ゲームに参加する場合は下のボタンを押す', actions=[MessageAction(label='参加する', text='ゲームに参加する'), PostbackAction(label='開始する', data='load_game')])
+            template_message = TemplateSendMessage(
+                alt_text='参加ボタン', template=buttons_template)
         line_bot_api.reply_message(event.reply_token, template_message)
 
     elif event.postback.data == 'load_game':
