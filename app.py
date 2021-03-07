@@ -125,7 +125,6 @@ def handle_text_message(event):
         print(userid)
 
     if text == '大富豪スタート':
-
         image_carousel_template = ImageCarouselTemplate(columns=[
             ImageCarouselColumn(image_url=request.url_root + '/static/start_game.png',
                                 action=PostbackAction(label='ゲームを開始する',
@@ -145,15 +144,16 @@ def handle_text_message(event):
         configs = {"eight":False, "eleven":False, "revol":False, "spade3":False, "sootlock":False, "steplock":False, "kingdie":False, "e_change":False, "change":False, "soot":False, "step":False}
         rankings = {"past":[], "now":[]}
         cards = []
-        game_data = {"menber":players, "config":configs, "ranking":rankings, "card":cards}
+        flag = False
+        game_data = {"menber":players, "config":configs, "ranking":rankings, "card":cards, "flag":flag}
 
         if isinstance(event.source, SourceGroup):
-            game_id_group[event.source.group_id] = game_data
-
+            if not event.source.group_id in game_id_group:
+                game_id_group[event.source.group_id] = game_data
             line_bot_api.reply_message(event.reply_token, template_message)
         elif isinstance(event.source, SourceRoom):
-            game_id_room[event.source.room_id] = game_data
-
+            if not event.source.room_id in game_id_room
+                game_id_room[event.source.room_id] = game_data
             line_bot_api.reply_message(event.reply_token, template_message)
         else:
             line_bot_api.reply_message(
@@ -361,7 +361,6 @@ def handle_text_message(event):
         line_bot_api.reply_message(event.reply_token, template_message)
 
     elif text == '提出する' and not isinstance(event.source, SourceUser):
-
         try:
             card = user_card["cards"][event.source.user_id]
         except KeyError:
@@ -609,18 +608,28 @@ def handle_text_message(event):
 
     elif text == 'あがる' and not isinstance(event.source, SourceUser):
         send = []
+        win = False
         fin = False
         if user_card[event.source.user_id] != []:
             send = [TextSendMessage(text="まだ手持ちにカードが残っています。")] 
-
-        else:
-            if isinstance(event.source, SourceGroup):
+        elif isinstance(event.source, SourceGroup):
+            if game_id_group[event.source.group_id]["flag"]:
+                win = True
                 game_id_group[event.source.group_id]["ranking"]["now"].append(event.source.user_id)
                 game = game_id_group[event.source.group_id] 
-            elif isinstance(event.source, SourceRoom):
+            
+            else:
+                send = [TextSendMessage(text="ゲームを開始してください。")]
+        elif isinstance(event.source, SourceRoom):
+            if game_id_room[event.source.roomsss_id]["flag"]:
+                win = True
                 game_id_room[event.source.room_id]["ranking"]["now"].append(event.source.user_id)
                 game = game_id_room[event.source.room_id]
 
+            else:
+                send = [TextSendMessage(text="ゲームを開始してください。")]
+
+        if win:
             winner = game["menber"][event.source.user_id]
             send.append(TextSendMessage(text=f"{winner}さんがあがりました。\n"))
 
@@ -772,6 +781,7 @@ def handle_postback(event):
         trump = rand_ints_nodup(0,53)
         k = 0
         if isinstance(event.source, SourceGroup):
+            game_id_group[event.source.group_id]["flag"] = True
             while k < 54 :
                 for i in list(game_id_group[event.source.group_id]["menber"].keys()):
                     user_card[i].append(trump[k])
@@ -780,6 +790,7 @@ def handle_postback(event):
                     if k >= 54:
                         break
         if isinstance(event.source, SourceRoom):
+            game_id_room[event.source.room_id]["flag"] = True
             while k < 54 :
                 for i in list(game_id_room[event.source.room_id]["menber"].keys()):
                     user_card[i].append(trump[k])
@@ -847,8 +858,7 @@ def handle_postback(event):
             send = TextSendMessage(text=f"{st}{no}を提出します。ほかに提出したいカードがある場合は選択し、グループに戻って「提出する」と発言してください。")
             user_card["cards"][event.source.user_id].append(num)
 
-        if user_card["cards"][event.source.user_id] in 52 or user_card["cards"][event.source.user_id] in 53:
-            user_card["cards"][event.source.user_id].sort(reverse=True)
+        user_card["cards"][event.source.user_id].sort(reverse=True)
         line_bot_api.reply_message(event.reply_token, send)
 
     elif event.postback.data == 'pass':
