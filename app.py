@@ -459,9 +459,15 @@ def handle_text_message(event):
                         break
 
                     if config["steplock"]:
-                        if config["step"] and (trash[j]%13)+1 != num and num != 13:
+                        if config["step"] and (trash[j]%13)+1 != num and num != 13 and not((e_change or change) and not (e_change and change)):
                             user_card["cards"][event.source.user_id] = []
                             msg = [TextSendMessage(text="場のカードより1大きいカードを提出する必要があります。カードを一から選びなおすか、パスすることを宣言してください。")]
+                            breakflg = True
+                            break
+
+                        elif config["step"] and (trash[j]%13)-1 != num and num != 13 and ((e_change or change) and not (e_change and change)):
+                            user_card["cards"][event.source.user_id] = []
+                            msg = [TextSendMessage(text="場のカードより1小さいカードを提出する必要があります。カードを一から選びなおすか、パスすることを宣言してください。")]
                             breakflg = True
                             break
 
@@ -469,6 +475,10 @@ def handle_text_message(event):
                             stepflg += 1
 
                 if breakflg:
+                    if isinstance(event.source, SourceGroup):
+                        game_id_group[event.source.group_id]["card"] = trash
+                    elif isinstance(event.source, SourceRoom):
+                        game_id_room[event.source.room_id]["card"] = trash
                     send = []
                     break
 
@@ -480,7 +490,7 @@ def handle_text_message(event):
                     if isinstance(event.source, SourceGroup):
                         game_id_group[event.source.group_id]["config"]["e_change"] = True
                     elif isinstance(event.source, SourceRoom):
-                        game_id_room[event.source.room_id]["card"]["e_change"] = True
+                        game_id_room[event.source.room_id]["config"]["e_change"] = True
 
                     message.append('イレブンバックが発生しました。場のカードの序列が反転します。')
 
@@ -540,7 +550,7 @@ def handle_text_message(event):
                     else:
                         for z in range(jkr):
                             game_id_room[event.source.room_id]["card"].append(i)
-                            jkr = 1
+                        jkr = 1
             if stepflg == many and subtract_list(card, [52,53]) != [] and many != 0:
                 if isinstance(event.source, SourceGroup):
                     game_id_group[event.source.group_id]["config"]["step"] = True
@@ -766,6 +776,7 @@ def handle_postback(event):
                 for i in list(game_id_group[event.source.group_id]["menber"].keys()):
                     user_card[i].append(trump[k])
                     k += 1
+                    user_card[i].sort()
                     if k >= 54:
                         break
         if isinstance(event.source, SourceRoom):
@@ -773,6 +784,7 @@ def handle_postback(event):
                 for i in list(game_id_room[event.source.room_id]["menber"].keys()):
                     user_card[i].append(trump[k])
                     k += 1
+                    user_card[i].sort()
                     if k >= 54:
                         break
 
@@ -834,6 +846,9 @@ def handle_postback(event):
 
             send = TextSendMessage(text=f"{st}{no}を提出します。ほかに提出したいカードがある場合は選択し、グループに戻って「提出する」と発言してください。")
             user_card["cards"][event.source.user_id].append(num)
+
+        if user_card["cards"][event.source.user_id] in 52 or user_card["cards"][event.source.user_id] in 53:
+            user_card["cards"][event.source.user_id].sort(reverse=True)
         line_bot_api.reply_message(event.reply_token, send)
 
     elif event.postback.data == 'pass':
