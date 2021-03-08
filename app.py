@@ -82,10 +82,6 @@ def make_static_tmp_dir():
         else:
             raise
 
-@app.route("/")
-def hello():
-    return "Hello World"
-
 @app.route("/callback", methods=['POST'])
 def callback():
 
@@ -118,11 +114,6 @@ def handle_text_message(event):
         game_id_group = game["group"]
         game_id_room = game["room"]
         user_card = game["user"]
-
-        groupid = json.dumps(game_id_group, ensure_ascii=False)
-        userid = json.dumps(user_card, ensure_ascii=False)
-        print(groupid)
-        print(userid)
 
     if text == '大富豪スタート':
         image_carousel_template = ImageCarouselTemplate(columns=[
@@ -474,7 +465,7 @@ def handle_text_message(event):
                             breakflg = True
                             break
 
-                        elif not config["step"] and (trash[j]%13)+1 == num and not config["wasjoker"] and (not 52 in card and not 53 in card):
+                        elif not config["step"] and ((trash[j]%13)+1 == num or (((e_change or change) and not (e_change and change)) and (trash[j]%13)-1 == num)) and not config["wasjoker"] and (not 52 in card and not 53 in card):
                             if isinstance(event.source, SourceGroup):
                                 game_id_group[event.source.group_id]["config"]["step"] = True
                             elif isinstance(event.source, SourceRoom):
@@ -486,8 +477,16 @@ def handle_text_message(event):
                 if breakflg:
                     if isinstance(event.source, SourceGroup):
                         game_id_group[event.source.group_id]["card"] = trash
+                        game_id_group[event.source.group_id]["config"]["e-change"] = config["e-change"]
+                        game_id_group[event.source.group_id]["config"]["change"] = config["change"]
+                        game_id_group[event.source.group_id]["config"]["soot"] = config["soot"]
+                        game_id_group[event.source.group_id]["config"]["step"] = config["step"]
                     elif isinstance(event.source, SourceRoom):
                         game_id_room[event.source.room_id]["card"] = trash
+                        game_id_room[event.source.room_id]["config"]["e-change"] = config["e-change"]
+                        game_id_room[event.source.room_id]["config"]["change"] = config["change"]
+                        game_id_room[event.source.room_id]["config"]["soot"] = config["soot"]
+                        game_id_room[event.source.room_id]["config"]["step"] = config["step"]
                     send = []
                     break
 
@@ -606,11 +605,13 @@ def handle_text_message(event):
             game_id_group[event.source.group_id]["config"]["e_change"] = False
             game_id_group[event.source.group_id]["config"]["soot"] = False
             game_id_group[event.source.group_id]["config"]["step"] = False
+            game_id_group[event.source.group_id]["config"]["wasjoker"] = False
         elif isinstance(event.source, SourceRoom):
             game_id_room[event.source.room_id]["card"] = []
             game_id_room[event.source.room_id]["card"]["e_change"] = False
             game_id_room[event.source.room_id]["card"]["soot"] = False
             game_id_room[event.source.room_id]["card"]["step"] = False
+            game_id_room[event.source.room_id]["card"]["wasjoker"] = False
 
         line_bot_api.reply_message(event.reply_token, TextSendMessage(text="場を削除しました。最後に提出した人からゲームを再開してください。"))
 
@@ -732,11 +733,6 @@ def handle_postback(event):
         game_id_group = game["group"]
         game_id_room = game["room"]
         user_card = game["user"]
-
-        groupid = json.dumps(game_id_group, ensure_ascii=False)
-        userid = json.dumps(user_card, ensure_ascii=False)
-        print(groupid)
-        print(userid)
 
     if event.postback.data == 'show_rule':
         explain = [
@@ -909,6 +905,7 @@ def handle_postback(event):
                 for i in list(game_id_group[event.source.group_id]["menber"].keys()):
                     user_card[i].append(trump[k])
                     k += 1
+                    user_card[i].sort()
                     if k >= 54:
                         break
         if isinstance(event.source, SourceRoom):
@@ -916,6 +913,7 @@ def handle_postback(event):
                 for i in list(game_id_room[event.source.room_id]["menber"].keys()):
                     user_card[i].append(trump[k])
                     k += 1
+                    user_card[i].sort()
                     if k >= 54:
                         break
 
@@ -924,13 +922,13 @@ def handle_postback(event):
     elif event.postback.data == 'finish':
         if isinstance(event.source, SourceGroup):
             for i in list(game_id_group[event.source.group_id]["menber"].keys()):
-                user_card[i] = []
-                user_card["cards"][i] = []
+                del user_card[i]
+                del user_card["cards"][i]
             del game_id_group[event.source.group_id]
         elif isinstance(event.source, SourceRoom):
             for i in list(game_id_room[event.source.room_id]["menber"].keys()):
-                user_card[i] = []
-                user_card["cards"][i] = []
+                del user_card[i]
+                del user_card["cards"][i]
             del game_id_room[event.source.room_id]
 
         line_bot_api.reply_message(event.reply_token, TextSendMessage(text="大富豪を終了しました。またのご利用をお待ちしております。"))
