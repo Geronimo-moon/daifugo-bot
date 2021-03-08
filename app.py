@@ -413,7 +413,7 @@ def handle_text_message(event):
                     soot.append(card[i] // 13)
                     tsoot.append(trash[i] // 13)
 
-                if config["soot"] and (len(tsoot)-len(soot)) != len(subtract_list(tsoot,soot)):
+                if config["soot"] and (len(tsoot)-len(soot)) != len(subtract_list(tsoot,soot)) and not (card[0] = 13 and subtract_list(trash,[52,53]) == [] and many == 1):
                     user_card["cards"][event.source.user_id] = []
                     breakflg = True
                     msg = [TextSendMessage(text="場のカードと同じスートのカードを提出する必要があります。カードを一から選びなおすか、パスすることを宣言してください。")]
