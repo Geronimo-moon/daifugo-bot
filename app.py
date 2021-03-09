@@ -595,7 +595,7 @@ def handle_text_message(event):
                 elif isinstance(event.source, SourceRoom):
                     game_id_room[event.source.room_id]["order"]["count"] += 1
                 nxt = (order["count"] % len(order["list"]))
-                nextpl = player[order["list"][nxt]]
+                nextpl = order["list"][nxt]
                 message.append(f"{nextpl}さんのターンです。カードを選択し、提出してください。")
 
             message = list(set(message))
@@ -835,7 +835,7 @@ def handle_postback(event):
             random.shuffle(game_id_room[event.source.room_id]["order"]["list"])
             s = "さん, ".join(game_id_room[event.source.room_id]["order"]["list"])
 
-        line_bot_api.reply_message(event.reply_token, TextSendMessage(text=f'カードの分配を行いました。botとのトークで「カードを確認する」と発言し、自分の手札を確認してください。全員の確認が終わったら好きな人からカードを提出してください。{s}さんの順番で提出を開始してください。'))
+        line_bot_api.reply_message(event.reply_token, TextSendMessage(text=f'カードの分配を行いました。botとのトークで「カードを確認する」と発言し、自分の手札を確認してください。全員の確認が終わったら, {s}さんの順番で提出を開始してください。'))
 
 
     elif event.postback.data.startswith('release '):
