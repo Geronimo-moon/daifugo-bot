@@ -135,7 +135,8 @@ def handle_text_message(event):
         configs = {"eight":False, "eleven":False, "revol":False, "spade3":False, "sootlock":False, "steplock":False, "kingdie":False, "e_change":False, "change":False, "soot":False, "step":False, "wasjoker":False}
         rankings = {"past":[], "now":[]}
         cards = []
-        game_data = {"menber":players, "config":configs, "ranking":rankings, "card":cards, "flag":False}
+        order = {"count":1, "list":[]}
+        game_data = {"menber":players, "config":configs, "ranking":rankings, "card":cards, "order":order, "flag":False}
 
         if isinstance(event.source, SourceGroup):
             if not event.source.group_id in game_id_group:
@@ -308,6 +309,7 @@ def handle_text_message(event):
         if isinstance(event.source, SourceGroup):
             if event.source.group_id in game_id_group:
                 game_id_group[event.source.group_id]["menber"][event.source.user_id] = line_bot_api.get_profile(event.source.user_id).display_name
+                game_id_group[event.source.group_id]["order"]["list"].append(line_bot_api.get_profile(event.source.user_id).display_name)
                 user_card[event.source.user_id] = []
                 user_card["cards"][event.source.user_id] = []
                 line_bot_api.reply_message(
@@ -320,6 +322,7 @@ def handle_text_message(event):
         elif isinstance(event.source, SourceRoom):
             if event.source.room_id in game_id_room:
                 game_id_room[event.source.room_id]["menber"][event.source.user_id] = line_bot_api.get_profile(event.source.user_id).display_name
+                game_id_room[event.source.room_id]["order"]["list"].append(line_bot_api.get_profile(event.source.user_id).display_name)
                 user_card[event.source.user_id] = []
                 user_card["cards"][event.source.user_id] = []
                 line_bot_api.reply_message(
@@ -363,7 +366,8 @@ def handle_text_message(event):
                 return None
             many = len(trash)
             config = game_id_group[event.source.group_id]["config"]
-            player = game_id_group[event.source.group_id]["menber"][event.source.user_id]
+            player = game_id_group[event.source.group_id]["menber"]
+            order = game_id_group[event.source.group_id]["order"]
         elif isinstance(event.source, SourceRoom):
             try:
                 trash = game_id_room[event.source.room_id]["card"]
@@ -373,6 +377,7 @@ def handle_text_message(event):
             many = len(trash)
             config = game_id_room[event.source.room_id]["config"]
             player = game_id_room[event.source.room_id]["menber"][event.source.user_id]
+            order = game_id_room[event.source.room_id]["order"]
 
         send = []
         breakflg = False
@@ -431,7 +436,8 @@ def handle_text_message(event):
                         if config["spade3"] and many == 1 and i == 13:
                             reset = True
                             s3 = True
-                            message.append(f'スぺ3返しが発生しました。{player}さんはもう一度カードを選択し、提出してください。')
+                            who = player[event.source.user_id]
+                            message.append(f'スぺ3返しが発生しました。{who}さんはもう一度カードを選択し、提出してください。')
 
                         else:
                             user_card["cards"][event.source.user_id] = []
@@ -477,13 +483,13 @@ def handle_text_message(event):
                 if breakflg:
                     if isinstance(event.source, SourceGroup):
                         game_id_group[event.source.group_id]["card"] = trash
-                        game_id_group[event.source.group_id]["config"]["e-change"] = config["e-change"]
+                        game_id_group[event.source.group_id]["config"]["e_change"] = config["e_change"]
                         game_id_group[event.source.group_id]["config"]["change"] = config["change"]
                         game_id_group[event.source.group_id]["config"]["soot"] = config["soot"]
                         game_id_group[event.source.group_id]["config"]["step"] = config["step"]
                     elif isinstance(event.source, SourceRoom):
                         game_id_room[event.source.room_id]["card"] = trash
-                        game_id_room[event.source.room_id]["config"]["e-change"] = config["e-change"]
+                        game_id_room[event.source.room_id]["config"]["e_change"] = config["e_change"]
                         game_id_room[event.source.room_id]["config"]["change"] = config["change"]
                         game_id_room[event.source.room_id]["config"]["soot"] = config["soot"]
                         game_id_room[event.source.room_id]["config"]["step"] = config["step"]
@@ -492,7 +498,8 @@ def handle_text_message(event):
 
                 if num == 5 and config["eight"]:
                     reset = True
-                    message.append(f'八切りが発生しました。{player}さんはもう一度カードを選択し、提出してください。')
+                    who = player[event.source.user_id]
+                    message.append(f'八切りが発生しました。{who}さんはもう一度カードを選択し、提出してください。')
 
                 elif num == 8 and config["eleven"]:
                     if isinstance(event.source, SourceGroup):
@@ -558,9 +565,7 @@ def handle_text_message(event):
                     else:
                         for z in range(jkr):
                             game_id_room[event.source.room_id]["card"].append(i)
-                        jkr = 1
-
-            message.append('次の人はカードを選択し、「提出する」と発言してください。')        
+                        jkr = 1       
 
         if reset:
             if isinstance(event.source, SourceGroup):
@@ -584,6 +589,14 @@ def handle_text_message(event):
                 game_id_room[event.source.room_id]["config"]["wasjoker"] = False
 
         if send != []:
+            if isinstance(event.source, SourceGroup):
+                game_id_group[event.source.group_id]["order"]["count"] += 1
+            elif isinstance(event.source, SourceRoom):
+                game_id_room[event.source.room_id]["order"]["count"] += 1
+            
+            if not reset:
+                nextpl = player[order["list"][order["count"]]]
+                message.append(f"{nextpl}さんのターンです。カードを選択し、提出してください。")
 
             message = list(set(message))
 
@@ -713,12 +726,15 @@ def handle_text_message(event):
 
         line_bot_api.reply_message(event.reply_token, send)
 
-    elif text == "終了する":
+    elif text == "終了する" and not isinstance(event.source, SourceUser):
         buttons_template = ButtonsTemplate(title='終了しますか？', text='ゲームのデータは完全に削除されます', actions=[PostbackAction(label='終了する', data='finish'), PostbackAction(label='続行する', data='pass')])
         template_message = TemplateSendMessage(
             alt_text='終了ボタン', template=buttons_template)
         line_bot_api.reply_message(event.reply_token, template_message)
 
+    elif text == "提出リセット" and isinstance(event.source, SourceUser):
+        user_card["cards"][event.source.user_id] = []
+        line_bot_api.reply_message(event.reply_token, TextSendMessage(text="提出するカードをリセットしました。提出カードを再選択してください。"))
 
     with open('gamedata.json', 'w') as f:
         data = {'group':game_id_group, 'room':game_id_room, 'user':user_card}
@@ -737,7 +753,7 @@ def handle_postback(event):
     if event.postback.data == 'show_rule':
         explain = [
             TextSendMessage(text="基本ルール：\n　前の人が出したカードより強いカードを出していって、手持ちのカードを早くなくした人が勝ちです。\n\nカードの強さ：\n　最弱を3として、4,5,...Q,K,A,2の順に強くなります。最強はジョーカーです。\n\nカードの種類：\n　各スートの十三枚とジョーカー二枚の計54枚で行います。\n\n誰もカードを出せない場合：\n　全員がパスを行ってターンを終了した場合、場のカードを削除し、最後に出した人がもう一度カードを出して再開します。\n\n複数カードについて：\n　場が更新された時、同じ数の書かれたカードは複数枚提出することが可能です。その場合、後続は提出された数と同じだけのカードを提出する必要があります(ジョーカーを含んでもよい)。\n\n特殊ルール：\n　特殊なルールです。「設定を変更」からオン・オフを切り替えられます(ゲーム開始時はオフになっています)。\n\n　八切り：\n　　8のカードが出た時に場のカードを削除し、8を出した人がもう一度カードを出して再開します。\n\n　イレブンバック：\n　　Jのカードが出た時に、ジョーカーを除くカードの強さを反転させるか選びます。反転は場のカードが削除されるまで続きます。\n\n　革命：\n　　4枚のカードが同時に場に出た時、ジョーカーを除くカードの強さを反転させます。反転は再び革命が起こるまで続きます。\n\n　スペ3：\n　　ジョーカー一枚が出た時、スペードの3を場に出すことができます。この時、場のカードを削除しスペードの3を出した人からゲームを再開します。\n\n　縛り：\n　　条件を満たしたとき、提出条件が追加されます。効果は場が削除されるまで続きます。ジョーカーの提出に縛りは適用されません。\n\n　　スート縛り：\n　　　連続して同じスートのカードが提出された時、同じスートのカードしか出せなくなります。\n\n　　階段縛り：\n　　　場のカードより1だけ強いカードが提出された時、次の強さのカードしか出せなくなります。ジョーカーは数字カードの代用となります（例えば4→5→ジョーカーと出た場合、このジョーカーは6として扱われる）\n\n　都落ち：\n　　大富豪が1抜け出来なかった場合、強制的に大貧民となります。このルールを適用すると、カード交換も自動で適用されます。\n\n　カード交換：\n　　カードが配られた時、大貧民は最も強いカードを二枚大富豪に、大富豪は好きなカードを二枚大貧民にそれぞれ渡します。同様に、富豪と貧民はカードを一枚交換します。都落ちがオンの時のみ適用されます。"),
-            TextSendMessage(text="「大富豪スタート」と発言することで、スタートメニューを表示します。\n「（特殊ルール名）有効/無効」と発言することで、その特殊ルールを有効/無効にすることができます。都落ちとカード交換は同時発生のため、「都落ち・カード交換有効/無効」と発言してください。\n「ゲームに参加する」と発言することで、ゲームに参加することができます。\n「カードを確認する」とbotとのトークで発言すると、カードが表示され、提出するカードを選ぶことができます。\nカードを選択後にグループで「提出する」と発言すると、選択したカードが提出されます。\n「全員がパスを選択」と発言することで、場を削除し、新しいターンを開始します。\n手札がなくなった時点で「あがる」と発言してください。手札がないことを確認したのち、あがることができます。\n「終了する」と発言することで、いつでもゲームを終了できます。但し、戦績などのデータはすべて破棄されますのでご注意ください。\n\nパスの処理・あがりの処理は自動で行われません。条件を満たした時は必ず自分で発言するようにしてください。\nまた、PC版LINEでは現在大富豪をお楽しみいただけません。\nタイムアウトエラーにより返信が来ない時があります。お手数ですが、返信が来るまで根気よくメッセージを送信してください。")
+            TextSendMessage(text="「大富豪スタート」と発言することで、スタートメニューを表示します。\n「（特殊ルール名）有効/無効」と発言することで、その特殊ルールを有効/無効にすることができます。都落ちとカード交換は同時発生のため、「都落ち・カード交換有効/無効」と発言してください。\n「ゲームに参加する」と発言することで、ゲームに参加することができます。\n\n「カードを確認する」とbotとのトークで発言すると、カードが表示され、提出するカードを選ぶことができます。また、botとのトークで「提出リセット」と発言することで、選択したカードをリセットできます。\n\nカードを選択後にグループで「提出する」と発言すると、選択したカードが提出されます。\n\n「全員がパスを選択」と発言することで、場を削除し、新しいターンを開始します。\n\n手札がなくなった時点で「あがる」と発言してください。手札がないことを確認したのち、あがることができます。\n\n「終了する」と発言することで、いつでもゲームを終了できます。但し、戦績などのデータはすべて破棄されますのでご注意ください。\n\nパスの処理・あがりの処理は自動で行われません。条件を満たした時は必ず自分で発言するようにしてください。\n\nまた、PC版LINEでは現在大富豪をお楽しみいただけません。")
         ]
         line_bot_api.reply_message(event.reply_token, explain)
 
@@ -795,6 +811,7 @@ def handle_postback(event):
     elif event.postback.data == 'load_game':
         trump = rand_ints_nodup(0,53)
         k = 0
+        s = ""
         if isinstance(event.source, SourceGroup):
             game_id_group[event.source.group_id]["flag"] = True
             while k < 54 :
@@ -804,7 +821,9 @@ def handle_postback(event):
                     user_card[i].sort()
                     if k >= 54:
                         break
-        if isinstance(event.source, SourceRoom):
+            random.shuffle(game_id_group[event.source.group_id]["order"]["list"])
+            s = ", ".join(game_id_group[event.source.group_id]["order"]["list"])
+        elif isinstance(event.source, SourceRoom):
             game_id_room[event.source.room_id]["flag"] = True
             while k < 54 :
                 for i in list(game_id_room[event.source.room_id]["menber"].keys()):
@@ -813,8 +832,10 @@ def handle_postback(event):
                     user_card[i].sort()
                     if k >= 54:
                         break
+            random.shuffle(game_id_room[event.source.room_id]["order"]["list"])
+            s = "さん, ".join(game_id_room[event.source.room_id]["order"]["list"])
 
-        line_bot_api.reply_message(event.reply_token, TextSendMessage(text='カードの分配を行いました。botとのトークで「カードを確認する」と発言し、自分の手札を確認してください。全員の確認が終わったら好きな人からカードを提出してください。'))
+        line_bot_api.reply_message(event.reply_token, TextSendMessage(text=f'カードの分配を行いました。botとのトークで「カードを確認する」と発言し、自分の手札を確認してください。全員の確認が終わったら好きな人からカードを提出してください。{s}さんの順番で提出を開始してください。'))
 
 
     elif event.postback.data.startswith('release '):
