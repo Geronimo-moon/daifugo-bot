@@ -589,13 +589,13 @@ def handle_text_message(event):
                 game_id_room[event.source.room_id]["config"]["wasjoker"] = False
 
         if send != []:
-            if isinstance(event.source, SourceGroup):
-                game_id_group[event.source.group_id]["order"]["count"] += 1
-            elif isinstance(event.source, SourceRoom):
-                game_id_room[event.source.room_id]["order"]["count"] += 1
-            
             if not reset:
-                nextpl = player[order["list"][order["count"]]]
+                if isinstance(event.source, SourceGroup):
+                    game_id_group[event.source.group_id]["order"]["count"] += 1
+                elif isinstance(event.source, SourceRoom):
+                    game_id_room[event.source.room_id]["order"]["count"] += 1
+                nxt = (order["count"] % len(order["list"]))
+                nextpl = player[order["list"][nxt]]
                 message.append(f"{nextpl}さんのターンです。カードを選択し、提出してください。")
 
             message = list(set(message))
