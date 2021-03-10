@@ -591,9 +591,9 @@ def handle_text_message(event):
         if send != []:
             if not reset:
                 if isinstance(event.source, SourceGroup):
-                    game_id_group[event.source.group_id]["order"]["count"] += 1
+                    game_id_group[event.source.group_id]["order"]["count"] = order.index(player[event.source.user_id])+1
                 elif isinstance(event.source, SourceRoom):
-                    game_id_room[event.source.room_id]["order"]["count"] += 1
+                    game_id_room[event.source.room_id]["order"]["count"] = order.index(player[event.source.user_id])+1
                 nxt = (order["count"] % len(order["list"]))
                 nextpl = order["list"][nxt]
                 message.append(f"{nextpl}さんのターンです。カードを選択し、提出してください。")
@@ -619,12 +619,14 @@ def handle_text_message(event):
             game_id_group[event.source.group_id]["config"]["soot"] = False
             game_id_group[event.source.group_id]["config"]["step"] = False
             game_id_group[event.source.group_id]["config"]["wasjoker"] = False
+            game_id_group[event.source.group_id]['order']['count'] -= 1
         elif isinstance(event.source, SourceRoom):
             game_id_room[event.source.room_id]["card"] = []
-            game_id_room[event.source.room_id]["card"]["e_change"] = False
-            game_id_room[event.source.room_id]["card"]["soot"] = False
-            game_id_room[event.source.room_id]["card"]["step"] = False
-            game_id_room[event.source.room_id]["card"]["wasjoker"] = False
+            game_id_room[event.source.room_id]["config"]["e_change"] = False
+            game_id_room[event.source.room_id]["config"]["soot"] = False
+            game_id_room[event.source.room_id]["config"]["step"] = False
+            game_id_room[event.source.room_id]["config"]["wasjoker"] = False
+            game_id_room[event.source.room_id]['order']['count'] -= 1
 
         line_bot_api.reply_message(event.reply_token, TextSendMessage(text="場を削除しました。最後に提出した人からゲームを再開してください。"))
 
@@ -822,7 +824,7 @@ def handle_postback(event):
                     if k >= 54:
                         break
             random.shuffle(game_id_group[event.source.group_id]["order"]["list"])
-            s = ", ".join(game_id_group[event.source.group_id]["order"]["list"])
+            s = "さん, ".join(game_id_group[event.source.group_id]["order"]["list"])
         elif isinstance(event.source, SourceRoom):
             game_id_room[event.source.room_id]["flag"] = True
             while k < 54 :
@@ -867,13 +869,13 @@ def handle_postback(event):
         elif error3:
             send = TextSendMessage(text="あなたの持っていないカードです。")
 
-        else:        
+        else:
             soot = 0
             no = 0
             if num == 52 or num == 53:
                 st = 'ジョー'
                 no = 'カー'
-            else:    
+            else:
                 soot = num // 13
                 no = ((num % 13) + 3)% 13
                 if soot == 0:
@@ -890,6 +892,8 @@ def handle_postback(event):
                     no = 'Q'
                 elif no == 0:
                     no = 'K'
+                elif no == 1:
+                    no = 'A'
 
             send = TextSendMessage(text=f"{st}{no}を提出します。ほかに提出したいカードがある場合は選択し、グループに戻って「提出する」と発言してください。")
             user_card["cards"][event.source.user_id].append(num)
@@ -905,7 +909,7 @@ def handle_postback(event):
             past = game_id_group[event.source.group_id]["ranking"]["now"]
             game_id_group[event.source.group_id]["card"] = []
             game_id_group[event.source.group_id]["ranking"] = {"past":past, "now":[]}
-            
+
             for i in list(game_id_group[event.source.group_id]["menber"].keys()):
                 user_card[i] = []
                 user_card["cards"][i] = []
@@ -914,13 +918,14 @@ def handle_postback(event):
             past = game_id_room[event.source.room_id]["ranking"]["now"]
             game_id_room[event.source.room_id]["card"] = []
             game_id_room[event.source.room_id]["ranking"] = {"past":past, "now":[]}
-            
+
             for i in list(game_id_group[event.source.room_id]["menber"].keys()):
                 user_card[i] = []
                 user_card["cards"][i] = []
 
         trump = rand_ints_nodup(0,53)
         k = 0
+        s = ''
         if isinstance(event.source, SourceGroup):
             while k < 54 :
                 for i in list(game_id_group[event.source.group_id]["menber"].keys()):
@@ -929,7 +934,9 @@ def handle_postback(event):
                     user_card[i].sort()
                     if k >= 54:
                         break
-        if isinstance(event.source, SourceRoom):
+            random.shuffle(game_id_group[event.source.group_id]['order']['list'])
+            s = 'さん, '.join(game_id_group[event.source.group_id]['order']['list'])
+        elif isinstance(event.source, SourceRoom):
             while k < 54 :
                 for i in list(game_id_room[event.source.room_id]["menber"].keys()):
                     user_card[i].append(trump[k])
@@ -937,8 +944,9 @@ def handle_postback(event):
                     user_card[i].sort()
                     if k >= 54:
                         break
-
-        line_bot_api.reply_message(event.reply_token, TextSendMessage(text='同じメンバーで新たなゲームを開始し、カードの再分配を行いました。botとのトークで「カードを確認する」と発言し、自分の手札を確認してください。全員の確認が終わったら好きな人からカードを提出してください。'))
+            random.shuffle(game_id_room[event.source.room_id]['order']['list'])
+            s = 'さん, '.join(game_id_room[event.source.room_id]['order']['list'])
+        line_bot_api.reply_message(event.reply_token, TextSendMessage(text=f'同じメンバーで新たなゲームを開始し、カードの再分配を行いました。botとのトークで「カードを確認する」と発言し、自分の手札を確認してください。全員の確認が終わったら{s}さんの順番でカードを提出してください。'))
 
     elif event.postback.data == 'finish':
         if isinstance(event.source, SourceGroup):
